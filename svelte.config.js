@@ -12,8 +12,13 @@ export default {
 
 	kit: {
 		adapter: adapter(),
+
 		alias: {
-			'$': './src',
+			$: './src',
+		},
+
+		experimental: {
+			remoteFunctions: true,
 		},
 	},
 }
