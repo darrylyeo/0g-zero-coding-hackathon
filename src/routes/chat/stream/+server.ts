@@ -1,5 +1,6 @@
 import { agentById } from '$/constants/agents'
 import { modelByAddress } from '$/constants/models'
+import { getBroker } from '$/lib/server/broker'
 import { streamText, convertToCoreMessages, type UIMessage } from 'ai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { RequestHandler } from './$types'
@@ -12,9 +13,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		const messages = body.messages as UIMessage[] | undefined
 		const selectedProviderAddress = body.providerAddress as string | undefined
 		const contextAgentIds = (body.contextAgentIds as string[] | undefined) ?? []
-		const endpoint = body.endpoint as string | undefined
-		const model = body.model as string | undefined
-		const authHeaders = body.authHeaders as Record<string, string> | undefined
+		let endpoint = body.endpoint as string | undefined
+		let model = body.model as string | undefined
+		let authHeaders = body.authHeaders as Record<string, string> | undefined
 		if (!messages?.length || !selectedProviderAddress) {
 			return new Response(
 				JSON.stringify({ error: 'messages and providerAddress required' }),
@@ -22,12 +23,30 @@ export const POST: RequestHandler = async ({ request }) => {
 			)
 		}
 		if (!endpoint || !model || !authHeaders || typeof authHeaders !== 'object') {
-			return new Response(
-				JSON.stringify({
-					error: 'Connect a wallet (EIP-1193) to use chat; endpoint, model and authHeaders are required',
-				}),
-				{ status: 400, headers: { 'Content-Type': 'application/json' } },
-			)
+			const lastUserContent =
+				typeof messages[messages.length - 1]?.content === 'string'
+					? messages[messages.length - 1].content
+					: ''
+			try {
+				const broker = await getBroker()
+				const meta = await broker.inference.getServiceMetadata(selectedProviderAddress)
+				endpoint = meta.endpoint
+				model = meta.model
+				const raw = await broker.inference.getRequestHeaders(
+					selectedProviderAddress,
+					lastUserContent,
+				)
+				authHeaders = {}
+				for (const [k, v] of Object.entries(raw)) if (typeof v === 'string') authHeaders[k] = v
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err)
+				return new Response(
+					JSON.stringify({
+						error: `Server broker failed (endpoint/model/headers): ${message}`,
+					}),
+					{ status: 502, headers: { 'Content-Type': 'application/json' } },
+				)
+			}
 		}
 		if (!modelByAddress[selectedProviderAddress]) {
 			return new Response(

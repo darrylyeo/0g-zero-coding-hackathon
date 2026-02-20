@@ -32,6 +32,7 @@
 	let balanceOg = $state<string | null>(null)
 	let processingLock = $state(false)
 	let waitingOn = $state<'connecting wallet' | 'funds' | 'response' | null>(null)
+	let queueError = $state<string | null>(null)
 
 	const queueQuery = useLiveQuery((q) =>
 		q
@@ -114,9 +115,22 @@
 		chatStatus === 'submitted' || chatStatus === 'streaming',
 	)
 
+	let messagesListEl = $state<HTMLUListElement | null>(null)
+	$effect(() => {
+		messageQueue.length
+		const el = messagesListEl
+		if (!el) return
+		el.scrollTop = el.scrollHeight
+		const unsub = messages.subscribe(() => {
+			if (messagesListEl) messagesListEl.scrollTop = messagesListEl.scrollHeight
+		})
+		return unsub
+	})
+
 	$effect(() => {
 		if (messageQueue.length === 0 && !isWaitingOnResponse) {
 			waitingOn = null
+			queueError = null
 			return
 		}
 		if (messageQueue.length === 0) return
@@ -131,6 +145,7 @@
 			return
 		}
 		processingLock = true
+		queueError = null
 		const message = messageQueue[0]
 		const providerAddress = selectedProviderAddress
 		const agentIds = [...contextAgentIds]
@@ -165,8 +180,19 @@
 				)
 				shiftChatQueue()
 				waitingOn = 'response'
-			} catch {
-				waitingOn = 'funds'
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err)
+				queueError = msg
+				const lower = msg.toLowerCase()
+				waitingOn = (
+					lower.includes('balance') ||
+					lower.includes('ledger') ||
+					lower.includes('transfer') ||
+					lower.includes('fund') ||
+					lower.includes('insufficient')
+				)
+					? 'funds'
+					: null
 			} finally {
 				processingLock = false
 			}
@@ -229,7 +255,10 @@
 	</header>
 
 	<section class="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="Messages">
-		<ul class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-4 py-6">
+		<ul
+			bind:this={messagesListEl}
+			class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-end gap-4 overflow-y-auto px-4 py-6"
+		>
 			{#each $messages as message (message.id)}
 				<li
 					class={cn(
@@ -387,6 +416,8 @@
 					{#if waitingOn}
 						Waiting on: {waitingOn}.
 						{#if waitingOn === 'funds'}
+							— Create a ledger (3 OG min) and transfer 1 OG to the model provider
+							<a href="/chat/account" class="underline underline-offset-2 hover:text-foreground">Account</a>.
 							<button
 								type="button"
 								class="underline underline-offset-2 hover:text-foreground"
@@ -395,6 +426,9 @@
 								Retry
 							</button>
 						{/if}
+					{/if}
+					{#if queueError && !waitingOn}
+						<span class="text-destructive">{queueError}</span>
 					{/if}
 				</p>
 			{/if}
