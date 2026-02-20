@@ -15,7 +15,7 @@
 		"test:e2e": "playwright test"
 	},
 	"dependencies": {
-		"@0glabs/0g-serving-broker": "^0.6.2",
+		"@0glabs/0g-serving-broker": "^0.7.1",
 		"@0glabs/0g-ts-sdk": "^0.3.3",
 		"@ai-sdk/openai-compatible": "^0.0.14",
 		"@ai-sdk/svelte": "^1.0.0",

@@ -11,7 +11,6 @@
 		upsertChatPreferences,
 	} from '$/lib/db/chat-preferences'
 	import AccountSelect from '$/components/account-select.svelte'
-	import { Button } from '$/components/ui/button'
 	import * as Command from '$/components/ui/command'
 	import * as Popover from '$/components/ui/popover'
 	import { cn } from '$/lib/utils'
@@ -141,24 +140,43 @@
 							{/each}
 						</select>
 					</div>
-					<div class="flex flex-col gap-1.5">
+					<div class="flex min-w-0 flex-1 flex-col gap-1.5">
 						<span class="text-xs font-medium text-muted-foreground" id="chat-context-agents-label">iNFT Agents</span>
 						<Popover.Root bind:open={comboboxOpen}>
 							<Popover.Trigger>
 								{#snippet child({ props }: { props: Record<string, unknown> })}
-									<Button
+									<button
+										type="button"
 										{...props}
-										variant="outline"
-										class="min-w-36 justify-between"
+										class="flex min-h-10 min-w-36 flex-wrap items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-left text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_span.chip]:cursor-default"
 										role="combobox"
 										aria-expanded={comboboxOpen}
 										aria-labelledby="chat-context-agents-label"
 									>
-										{contextAgentIds.length > 0
-											? `iNFT Agents (${contextAgentIds.length})`
-											: 'iNFT Agents'}
-										<ChevronsUpDownIcon class="ms-2 size-4 shrink-0 opacity-50" />
-									</Button>
+										{#each contextAgentIds as id}
+											{@const agent = agents.find((a) => a.id === id)}
+											{#if agent}
+												<span
+													class="chip inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"
+													onclick={(e) => e.stopPropagation()}
+												>
+													{agent.name}
+													<button
+														type="button"
+														class="-me-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+														aria-label="Remove {agent.name}"
+														onclick={(e) => (e.preventDefault(), e.stopPropagation(), removeAgent(id))}
+													>
+														×
+													</button>
+												</span>
+											{/if}
+										{/each}
+										<span class="text-muted-foreground">
+											{contextAgentIds.length > 0 ? 'Add…' : 'Select agents…'}
+										</span>
+										<ChevronsUpDownIcon class="ms-auto size-4 shrink-0 opacity-50" />
+									</button>
 								{/snippet}
 							</Popover.Trigger>
 							<Popover.Content class="w-72 p-0" align="start">
@@ -188,28 +206,6 @@
 					</Popover.Root>
 					</div>
 				</div>
-				{#if contextAgentIds.length > 0}
-					<div class="flex flex-wrap gap-2">
-						{#each contextAgentIds as id}
-							{@const agent = agents.find((a) => a.id === id)}
-							{#if agent}
-								<span
-									class="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium"
-								>
-									{agent.name}
-									<button
-										type="button"
-										class="-me-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-										aria-label="Remove {agent.name}"
-										onclick={() => removeAgent(id)}
-									>
-										×
-									</button>
-								</span>
-							{/if}
-						{/each}
-					</div>
-				{/if}
 			</div>
 		</div>
 	</section>
