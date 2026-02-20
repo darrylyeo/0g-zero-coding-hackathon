@@ -7,16 +7,18 @@
 
 	const navLinks = [
 		{ href: '/chat', label: 'Chat' },
+		{ href: '/account', label: 'Account' },
 		{ href: '/agents', label: 'Agents' },
 		{ href: '/storage', label: 'Storage' },
 		{ href: '/explorer', label: 'Explorer' },
 	] as const
 
 	const footerLink = $derived(
-		(
+			(
 			{
 				'/': { label: '0G Stack', href: 'https://build.0g.ai/' },
 				'/chat': { label: '0G Compute', href: 'https://docs.0g.ai/developer-hub/building-on-0g/compute-network/sdk' },
+				'/account': { label: '0G Compute', href: 'https://docs.0g.ai/developer-hub/building-on-0g/compute-network/sdk' },
 				'/agents': { label: '0G iNFT', href: 'https://docs.0g.ai/developer-hub/building-on-0g/infts' },
 				'/storage': { label: '0G Storage', href: 'https://docs.0g.ai/developer-hub/building-on-0g/storage' },
 				'/explorer': { label: '0G Chain', href: 'https://chainscan-galileo.0g.ai/' },

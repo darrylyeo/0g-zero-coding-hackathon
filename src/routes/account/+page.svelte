@@ -149,17 +149,13 @@
 </script>
 
 <svelte:head>
-	<title>Account · Chat · 0GUI</title>
+	<title>Account · 0GUI</title>
 </svelte:head>
 
 <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
 	<header class="shrink-0 border-b border-border bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
 		<div class="mx-auto flex max-w-3xl items-center justify-between gap-4">
-			<div class="flex items-center gap-2">
-				<a href="/chat" class="text-sm font-medium text-muted-foreground hover:text-foreground">Chat</a>
-				<span class="text-muted-foreground/60" aria-hidden="true">/</span>
-				<h1 class="text-base font-semibold">Account</h1>
-			</div>
+			<h1 class="text-base font-semibold">Account</h1>
 			<AccountSelect bind:provider />
 		</div>
 	</header>
@@ -177,7 +173,8 @@
 				{@const infers = detail.detail?.infers ?? []}
 				<div class="space-y-8">
 					<section>
-						<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Ledger</h2>
+						<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Your ledger</h2>
+						<p class="mb-2 text-xs text-muted-foreground">Pooled balance; transfer to a model to use it in chat.</p>
 						<dl class="grid gap-x-6 gap-y-2 rounded-xl border border-border bg-card px-5 py-4 text-sm shadow-sm">
 							<div class="flex justify-between gap-4">
 								<dt class="text-muted-foreground">Address</dt>
@@ -204,13 +201,14 @@
 					</section>
 
 					<section>
-						<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Per-provider (inference)</h2>
+						<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Funds per model</h2>
+						<p class="mb-2 text-xs text-muted-foreground">OG available for each model when you chat.</p>
 						<div class="overflow-hidden rounded-xl border border-border shadow-sm">
 							<table class="w-full table-auto border-collapse text-sm">
 								<thead>
 									<tr class="border-b border-border bg-muted/40 text-left text-muted-foreground">
-										<th class="px-4 py-3 font-medium">Model / Provider</th>
-										<th class="px-4 py-3 text-right font-medium">Balance (OG)</th>
+										<th class="px-4 py-3 font-medium">Model</th>
+										<th class="px-4 py-3 text-right font-medium">Available (OG)</th>
 										<th class="w-24 px-4 py-3"></th>
 									</tr>
 								</thead>
@@ -245,7 +243,7 @@
 									{:else}
 										<tr>
 											<td colspan="3" class="px-4 py-8 text-center text-muted-foreground">
-												No provider balances
+												No funds for any model yet. Transfer OG below.
 											</td>
 										</tr>
 									{/each}
@@ -280,8 +278,8 @@
 								</div>
 							</div>
 							<div class="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
-								<label for="transfer-provider" class="text-sm font-medium">Transfer to provider</label>
-								<p class="text-xs text-muted-foreground">Send OG to a model so inference can run.</p>
+								<label for="transfer-provider" class="text-sm font-medium">Transfer to model</label>
+								<p class="text-xs text-muted-foreground">Send OG so this model has funds when you chat.</p>
 								<div class="mt-auto flex flex-wrap items-center gap-2">
 									<select
 										id="transfer-provider"
@@ -328,7 +326,7 @@
 					</section>
 
 					<p class="text-xs leading-relaxed text-muted-foreground">
-						Chat uses your connected wallet’s ledger. Ensure the ledger has balance and transfer at least 1 OG to the selected model provider so inference can run.
+						Ledger = your pool. Transfer OG to a model so that model has funds when you chat.
 					</p>
 				</div>
 			{:else if !provider}

@@ -2,7 +2,7 @@ import { createZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import { BrowserProvider } from 'ethers'
 import type { ZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import type { EIP1193Provider } from '$/lib/eip6963'
-import { ogTestnet } from '$/constants/networks'
+import { ogMinGasPrice, ogTestnet } from '$/constants/networks'
 import { rpcEndpointsByChainId } from '$/constants/rpc'
 
 const testnetChainIdHex = '0x' + ogTestnet.chainId.toString(16)
@@ -53,7 +53,13 @@ export async function createBrokerFromProvider(
 		if (!ok) return null
 	}
 	const signer = await ethersProvider.getSigner()
-	return createZGComputeNetworkBroker(signer)
+	return createZGComputeNetworkBroker(
+		signer,
+		undefined,
+		undefined,
+		undefined,
+		ogMinGasPrice,
+	)
 }
 
 export function getTestnetRpcUrl(): string | undefined {

@@ -2,7 +2,7 @@ import { createZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import { ethers } from 'ethers'
 import type { ZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import { env } from '$env/dynamic/private'
-import { ogTestnet } from '$/constants/networks'
+import { ogMinGasPrice, ogTestnet } from '$/constants/networks'
 import { rpcEndpointsByChainId } from '$/constants/rpc'
 
 let brokerInstance: Promise<ZGComputeNetworkBroker> | null = null
@@ -19,7 +19,13 @@ export async function getBroker(): Promise<ZGComputeNetworkBroker> {
 			walletPrivateKey.startsWith('0x') ? walletPrivateKey : `0x${walletPrivateKey}`,
 			rpcProvider,
 		)
-		brokerInstance = createZGComputeNetworkBroker(wallet)
+		brokerInstance = createZGComputeNetworkBroker(
+			wallet,
+			undefined,
+			undefined,
+			undefined,
+			ogMinGasPrice,
+		)
 	}
 	return brokerInstance
 }

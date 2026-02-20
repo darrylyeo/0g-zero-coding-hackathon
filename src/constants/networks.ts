@@ -25,3 +25,6 @@ export const networkByChainId = Object.fromEntries(
 ) as Record<number, (typeof networks)[number]>
 
 export const ogTestnet = networks.find((n) => n.type === Network.OgTestnet)!
+
+/** Min gas price (neuron) for 0G testnet txs; below this RPC rejects with "gas tip cap below minimum" */
+export const ogMinGasPrice = 2_000_000_000

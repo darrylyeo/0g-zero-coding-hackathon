@@ -24,6 +24,7 @@
 	import { ethers } from 'ethers'
 	import { createBrokerFromProvider } from '$/lib/broker-client'
 	import AccountSelect from '$/components/account-select.svelte'
+	import * as Collapsible from '$/components/ui/collapsible'
 	import * as Command from '$/components/ui/command'
 	import * as Popover from '$/components/ui/popover'
 	import { flip } from 'svelte/animate'
@@ -61,6 +62,37 @@
 	let initialMessagesApplied = $state(false)
 	let fundBusy = $state<'add' | 'transfer' | null>(null)
 	let addLedgerAmount = $state('5')
+	let retryTrigger = $state(0)
+	let modelFundsOg = $state<string | null>(null)
+
+	$effect(() => {
+		const p = provider
+		const addr = selectedProviderAddress
+		retryTrigger
+		if (!p || !addr) {
+			modelFundsOg = null
+			return
+		}
+		let cancelled = false
+		;(async () => {
+			try {
+				const broker = await createBrokerFromProvider(p)
+				if (!broker || cancelled) return
+				const raw = await broker.ledger.ledger.getLedgerWithDetail()
+				if (cancelled) return
+				const row = raw.infers?.find(
+					([a]) => a?.toLowerCase() === addr?.toLowerCase(),
+				)
+				const wei = row?.[1] ?? 0n
+				if (!cancelled) modelFundsOg = (Number(wei) / 1e18).toFixed(4)
+			} catch {
+				if (!cancelled) modelFundsOg = null
+			}
+		})()
+		return () => {
+			cancelled = true
+		}
+	})
 
 	$effect(() => {
 		const p = provider
@@ -180,6 +212,7 @@
 	})
 
 	$effect(() => {
+		retryTrigger
 		if (messageQueue.length === 0 && !isWaitingOnResponse) {
 			waitingOn = null
 			queueError = null
@@ -242,7 +275,13 @@
 					lower.includes('ledger') ||
 					lower.includes('transfer') ||
 					lower.includes('fund') ||
-					lower.includes('insufficient')
+					lower.includes('insufficient') ||
+					lower.includes('account') ||
+					lower.includes('exist') ||
+					lower.includes('acknowledge') ||
+					lower.includes('signer') ||
+					lower.includes('credential') ||
+					lower.includes('auth')
 				)
 					? 'funds'
 					: null
@@ -286,7 +325,9 @@
 			const broker = await createBrokerFromProvider(provider)
 			if (!broker) throw new Error('Switch to 0G Testnet')
 			await broker.ledger.addLedger(amount)
+			queueError = null
 			waitingOn = null
+			retryTrigger++
 		} catch (e) {
 			queueError = e instanceof Error ? e.message : String(e)
 		} finally {
@@ -306,7 +347,9 @@
 				'inference',
 				ethers.parseEther('1'),
 			)
+			queueError = null
 			waitingOn = null
+			retryTrigger++
 		} catch (e) {
 			queueError = e instanceof Error ? e.message : String(e)
 		} finally {
@@ -404,20 +447,30 @@
 			<div class="mx-auto flex max-w-3xl flex-col gap-4">
 				<div class="flex flex-wrap items-end gap-4">
 					<div class="flex flex-col gap-1.5">
-						<label for="chat-model-select" class="text-xs font-medium text-muted-foreground">Model (hosted on 0G Compute)</label>
-						<select
-							id="chat-model-select"
-							class="min-w-[12rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
-							value={selectedProviderAddress}
-							onchange={(e) =>
-								setProviderAddress((e.target as HTMLSelectElement).value)}
-						>
-							<optgroup label="0G Compute">
-								{#each models as m}
-									<option value={m.contract.address}>{m.name}</option>
-								{/each}
-							</optgroup>
-						</select>
+						<label for="chat-model-select" class="text-xs font-medium text-muted-foreground">Model</label>
+						<div class="flex flex-wrap items-center gap-2">
+							<select
+								id="chat-model-select"
+								class="min-w-[12rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
+								value={selectedProviderAddress}
+								onchange={(e) =>
+									setProviderAddress((e.target as HTMLSelectElement).value)}
+							>
+								<optgroup label="0G Compute">
+									{#each models as m}
+										<option value={m.contract.address}>{m.name}</option>
+									{/each}
+								</optgroup>
+							</select>
+							{#if provider}
+								<span class="text-xs text-muted-foreground">
+									Funds for this model:
+									<span class={modelFundsOg != null && Number(modelFundsOg) > 0 ? 'tabular-nums font-medium text-foreground' : 'tabular-nums'}>
+										{modelFundsOg != null ? `${modelFundsOg} OG` : '…'}
+									</span>
+								</span>
+							{/if}
+						</div>
 					</div>
 					<div class="flex min-w-0 flex-1 flex-col gap-1.5">
 						<span class="text-xs font-medium text-muted-foreground" id="chat-context-agents-label">iNFT Agents</span>
@@ -501,58 +554,70 @@
 					</button>
 				</div>
 			</form>
-			{#if messageQueue.length > 0 || waitingOn}
-				<p class="mx-auto mt-2 max-w-3xl text-xs text-muted-foreground">
-					{#if messageQueue.length > 0}
-						Queued: {messageQueue.length} {messageQueue.length === 1 ? 'message' : 'messages'}.
-					{/if}
-					{#if waitingOn}
-						Waiting on: {waitingOn}.
-						{#if waitingOn === 'funds'}
-							—
-							<span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-								Add to ledger
-								<input
-									type="number"
-									min="3"
-									step="1"
-									class="w-14 rounded border border-input bg-background px-1.5 py-0.5 text-xs"
-									bind:value={addLedgerAmount}
-								/>
-								OG
-								<button
-									type="button"
-									class="rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-									disabled={fundBusy != null || !provider}
-									onclick={addLedgerFromChat}
-								>
-									{fundBusy === 'add' ? '…' : 'Add'}
-								</button>
-								or transfer 1 OG to
-								{modelByAddress[selectedProviderAddress]?.name ?? selectedProviderAddress.slice(0, 8)}…
-								<button
-									type="button"
-									class="rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-									disabled={fundBusy != null || !provider}
-									onclick={transferToProviderFromChat}
-								>
-									{fundBusy === 'transfer' ? '…' : 'Transfer'}
-								</button>
-								<a href="/account" class="underline underline-offset-2 hover:text-foreground">Account</a>
-								<button
-									type="button"
-									class="underline underline-offset-2 hover:text-foreground"
-									onclick={() => (waitingOn = null)}
-								>
-									Retry
-								</button>
-							</span>
+			{#if messageQueue.length > 0 || waitingOn || queueError}
+				<div class="mx-auto mt-2 max-w-3xl space-y-1.5 text-xs text-muted-foreground">
+					<p>
+						{#if messageQueue.length > 0}
+							Queued: {messageQueue.length} {messageQueue.length === 1 ? 'message' : 'messages'}.
 						{/if}
+						{#if waitingOn}
+							Waiting on: {waitingOn}.
+						{/if}
+						{#if queueError}
+							<span class="text-destructive">{queueError}</span>
+						{/if}
+					</p>
+					{#if messageQueue.length > 0 && !isWaitingOnResponse && (waitingOn === 'funds' || queueError)}
+						<Collapsible.Root class="rounded-lg border border-border">
+							<Collapsible.Trigger class="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-muted/50">
+								Fund this model
+								{#if modelFundsOg != null}
+									<span class="tabular-nums text-muted-foreground">({modelFundsOg} OG)</span>
+								{/if}
+								<span class="text-muted-foreground/70" aria-hidden="true">▼</span>
+							</Collapsible.Trigger>
+							<Collapsible.Content class="px-3 pb-3 pt-0">
+								<div class="flex flex-wrap items-center gap-x-2 gap-y-2 pt-1">
+									Add to ledger
+									<input
+										type="number"
+										min="3"
+										step="1"
+										class="w-14 rounded border border-input bg-background px-1.5 py-0.5 text-xs"
+										bind:value={addLedgerAmount}
+									/>
+									OG
+									<button
+										type="button"
+										class="rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+										disabled={fundBusy != null || !provider}
+										onclick={addLedgerFromChat}
+									>
+										{fundBusy === 'add' ? '…' : 'Add'}
+									</button>
+									or transfer 1 OG to
+									{modelByAddress[selectedProviderAddress]?.name ?? selectedProviderAddress.slice(0, 8)}…
+									<button
+										type="button"
+										class="rounded bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+										disabled={fundBusy != null || !provider}
+										onclick={transferToProviderFromChat}
+									>
+										{fundBusy === 'transfer' ? '…' : 'Transfer'}
+									</button>
+									<a href="/account" class="underline underline-offset-2 hover:text-foreground">Account</a>
+									<button
+										type="button"
+										class="underline underline-offset-2 hover:text-foreground"
+										onclick={() => (queueError = null, waitingOn = null, retryTrigger++)}
+									>
+										Retry
+									</button>
+								</div>
+							</Collapsible.Content>
+						</Collapsible.Root>
 					{/if}
-					{#if queueError && !waitingOn}
-						<span class="text-destructive">{queueError}</span>
-					{/if}
-				</p>
+				</div>
 			{/if}
 		</div>
 	</section>
