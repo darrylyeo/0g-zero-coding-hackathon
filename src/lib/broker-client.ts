@@ -2,17 +2,17 @@ import { createZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import { BrowserProvider } from 'ethers'
 import type { ZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import type { EIP1193Provider } from '$/lib/eip6963'
+import { ogTestnet } from '$/constants/networks'
 import { rpcEndpointsByChainId } from '$/constants/rpc'
 
-const TESTNET_CHAIN_ID = 16602
-const TESTNET_CHAIN_ID_HEX = '0x' + TESTNET_CHAIN_ID.toString(16)
+const testnetChainIdHex = '0x' + ogTestnet.chainId.toString(16)
 
 async function ensureTestnetChain(provider: EIP1193Provider): Promise<boolean> {
-	const rpcUrl = rpcEndpointsByChainId.get(TESTNET_CHAIN_ID)?.[0]?.url
+	const rpcUrl = rpcEndpointsByChainId.get(ogTestnet.chainId)?.[0]?.url
 	try {
 		await provider.request({
 			method: 'wallet_switchEthereumChain',
-			params: [{ chainId: TESTNET_CHAIN_ID_HEX }],
+			params: [{ chainId: testnetChainIdHex }],
 		})
 		return true
 	} catch (err: unknown) {
@@ -23,15 +23,16 @@ async function ensureTestnetChain(provider: EIP1193Provider): Promise<boolean> {
 					method: 'wallet_addEthereumChain',
 					params: [
 						{
-							chainId: TESTNET_CHAIN_ID_HEX,
-							chainName: '0G Testnet',
+							chainId: testnetChainIdHex,
+							chainName: ogTestnet.name,
 							rpcUrls: [rpcUrl],
+							nativeCurrency: ogTestnet.nativeCurrency,
 						},
 					],
 				})
 				await provider.request({
 					method: 'wallet_switchEthereumChain',
-					params: [{ chainId: TESTNET_CHAIN_ID_HEX }],
+					params: [{ chainId: testnetChainIdHex }],
 				})
 				return true
 			} catch {
@@ -47,7 +48,7 @@ export async function createBrokerFromProvider(
 ): Promise<ZGComputeNetworkBroker | null> {
 	const ethersProvider = new BrowserProvider(provider)
 	const chainId = (await ethersProvider.getNetwork()).chainId
-	if (chainId !== BigInt(TESTNET_CHAIN_ID)) {
+	if (chainId !== BigInt(ogTestnet.chainId)) {
 		const ok = await ensureTestnetChain(provider)
 		if (!ok) return null
 	}
@@ -56,5 +57,5 @@ export async function createBrokerFromProvider(
 }
 
 export function getTestnetRpcUrl(): string | undefined {
-	return rpcEndpointsByChainId.get(TESTNET_CHAIN_ID)?.[0]?.url
+	return rpcEndpointsByChainId.get(ogTestnet.chainId)?.[0]?.url
 }

@@ -1,3 +1,5 @@
+import { ogTestnet } from '$/constants/networks'
+
 export enum Model {
 	Qwen = 'Qwen',
 	GptOss20b = 'GptOss20b',
@@ -10,7 +12,7 @@ export const models = [
 		id: 'qwen',
 		name: 'Qwen 2.5 7B Instruct',
 		contract: {
-			chainId: 16602,
+			chainId: ogTestnet.chainId,
 			address: '0xa48f01287233509FD694a22Bf840225062E67836',
 		},
 	},
@@ -19,7 +21,7 @@ export const models = [
 		id: 'gpt-oss-20b',
 		name: 'GPT-OSS 20B',
 		contract: {
-			chainId: 16602,
+			chainId: ogTestnet.chainId,
 			address: '0x8e60d466FD16798Bec4868aa4CE38586D5590049',
 		},
 	},
@@ -28,7 +30,7 @@ export const models = [
 		id: 'gemma',
 		name: 'Gemma 3 27B IT',
 		contract: {
-			chainId: 16602,
+			chainId: ogTestnet.chainId,
 			address: '0x69Eb5a0BD7d0f4bF39eD5CE9Bd3376c61863aE08',
 		},
 	},

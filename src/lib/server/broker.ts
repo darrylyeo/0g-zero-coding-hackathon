@@ -2,9 +2,8 @@ import { createZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import { ethers } from 'ethers'
 import type { ZGComputeNetworkBroker } from '@0glabs/0g-serving-broker'
 import { env } from '$env/dynamic/private'
+import { ogTestnet } from '$/constants/networks'
 import { rpcEndpointsByChainId } from '$/constants/rpc'
-
-const TESTNET_CHAIN_ID = 16602
 
 let brokerInstance: Promise<ZGComputeNetworkBroker> | null = null
 
@@ -12,9 +11,9 @@ export async function getBroker(): Promise<ZGComputeNetworkBroker> {
 	if (!brokerInstance) {
 		const walletPrivateKey = env.OG_COMPUTE_WALLET_PRIVATE_KEY
 		if (!walletPrivateKey) throw new Error('OG_COMPUTE_WALLET_PRIVATE_KEY is required')
-		const endpoints = rpcEndpointsByChainId.get(TESTNET_CHAIN_ID)
+		const endpoints = rpcEndpointsByChainId.get(ogTestnet.chainId)
 		const rpcUrl = endpoints?.[0]?.url
-		if (!rpcUrl) throw new Error(`No RPC endpoint for chain ${TESTNET_CHAIN_ID}`)
+		if (!rpcUrl) throw new Error(`No RPC endpoint for chain ${ogTestnet.chainId}`)
 		const rpcProvider = new ethers.JsonRpcProvider(rpcUrl)
 		const wallet = new ethers.Wallet(
 			walletPrivateKey.startsWith('0x') ? walletPrivateKey : `0x${walletPrivateKey}`,

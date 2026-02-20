@@ -48,7 +48,8 @@
 				variant="outline"
 				role="combobox"
 				aria-expanded={open}
-				class={cn('w-[200px] justify-between', className)}
+				aria-label="Wallet"
+				class={cn('w-auto min-w-[8rem] justify-between', className)}
 			>
 				{#if selected}
 					<span class="flex items-center gap-2 truncate">

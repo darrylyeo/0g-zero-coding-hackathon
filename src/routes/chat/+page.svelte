@@ -6,10 +6,13 @@
 	import { useChat } from '@ai-sdk/svelte'
 	import { agents } from '$/constants/agents'
 	import { models } from '$/constants/models'
+	import { ogTestnet } from '$/constants/networks'
+	import { rpcEndpointsByChainId } from '$/constants/rpc'
 	import {
 		chatPreferencesCollection,
 		upsertChatPreferences,
 	} from '$/lib/db/chat-preferences'
+	import { createBrokerFromProvider } from '$/lib/broker-client'
 	import AccountSelect from '$/components/account-select.svelte'
 	import * as Command from '$/components/ui/command'
 	import * as Popover from '$/components/ui/popover'
@@ -18,6 +21,59 @@
 	let provider = $state<import('$lib/eip6963').EIP1193Provider | null>(null)
 	let comboboxOpen = $state(false)
 	let input = $state('')
+	let connectedAddress = $state<string | null>(null)
+	let balanceOg = $state<string | null>(null)
+	let submitting = $state(false)
+
+	$effect(() => {
+		const p = provider
+		if (!p) {
+			connectedAddress = null
+			balanceOg = null
+			return
+		}
+		let cancelled = false
+		;(async () => {
+			try {
+				const accs = (await p.request({
+					method: 'eth_accounts',
+					params: [],
+				})) as string[] | undefined
+				const addr = Array.isArray(accs) && accs[0] ? String(accs[0]) : null
+				if (cancelled) return
+				connectedAddress = addr
+				if (!addr) {
+					balanceOg = null
+					return
+				}
+				const endpoints = rpcEndpointsByChainId.get(ogTestnet.chainId)
+				const rpc = endpoints?.[0]
+				if (!rpc) {
+					balanceOg = null
+					return
+				}
+				const res = await fetch(rpc.url, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'eth_getBalance',
+						params: [addr, 'latest'],
+					}),
+				})
+				const data = (await res.json()) as { result?: string }
+				const wei = data?.result ? BigInt(data.result) : 0n
+				if (cancelled) return
+				balanceOg = (Number(wei) / 1e18).toFixed(4) + ' $0G'
+			} catch {
+				if (!cancelled) balanceOg = null
+			}
+		})()
+		return () => {
+			cancelled = true
+		}
+	})
 
 	const prefsQuery = useLiveQuery((q) =>
 		q
@@ -32,6 +88,19 @@
 
 	const chat = useChat({ api: '/chat/stream' })
 	const messages = chat.messages
+	let chatStatus = $state<'submitted' | 'streaming' | 'ready' | 'error'>('ready')
+	$effect(() => {
+		const unsub = chat.status.subscribe((v) => {
+			chatStatus = v
+		})
+		return () => unsub()
+	})
+	const waitingOnResponse = $derived(
+		chatStatus === 'submitted' || chatStatus === 'streaming',
+	)
+	const sendBlocked = $derived(
+		!provider || submitting || waitingOnResponse,
+	)
 
 	function setProviderAddress(addr: string) {
 		upsertChatPreferences({ providerAddress: addr })
@@ -50,19 +119,45 @@
 		upsertChatPreferences({ contextAgentIds: current.filter((x) => x !== id) })
 	}
 
-	function handleSubmit(e: SubmitEvent) {
+	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault()
-		if (!input.trim()) return
-		chat.append(
-			{ role: 'user', content: input },
-			{
-				body: {
-					providerAddress: selectedProviderAddress,
-					contextAgentIds,
+		const text = input.trim()
+		if (!text || sendBlocked) return
+		submitting = true
+		try {
+			const broker = await createBrokerFromProvider(provider!)
+			if (!broker) {
+				submitting = false
+				return
+			}
+			const { endpoint, model } = await broker.inference.getServiceMetadata(
+				selectedProviderAddress,
+			)
+			const rawHeaders = await broker.inference.getRequestHeaders(
+				selectedProviderAddress,
+				text,
+			)
+			const authHeaders: Record<string, string> = {}
+			for (const [k, v] of Object.entries(rawHeaders))
+				if (typeof v === 'string') authHeaders[k] = v
+			chat.append(
+				{ role: 'user', content: text },
+				{
+					body: {
+						providerAddress: selectedProviderAddress,
+						contextAgentIds,
+						endpoint,
+						model,
+						authHeaders,
+					},
 				},
-			},
-		)
-		input = ''
+			)
+			input = ''
+		} catch (_) {
+			// TODO: surface error (e.g. insufficient balance, network)
+		} finally {
+			submitting = false
+		}
 	}
 </script>
 
@@ -70,23 +165,37 @@
 	<title>Chat · 0GUI</title>
 </svelte:head>
 
-<main class="flex min-h-dvh flex-col">
+<main class="flex h-full min-h-0 flex-col overflow-hidden">
 	<header class="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-4">
 		<div class="mx-auto flex max-w-3xl w-full items-center justify-between">
 			<h1 class="text-lg font-semibold tracking-tight">Chat</h1>
-			<div class="flex flex-col gap-1.5">
-				<span class="text-xs font-medium text-muted-foreground" id="chat-wallet-label">Wallet</span>
+			<div class="flex items-center gap-3">
+				{#if connectedAddress ?? balanceOg != null}
+					<div class="flex items-center gap-2 rounded-md border border-transparent bg-muted/50 px-2.5 py-1.5 font-mono text-xs">
+						{#if connectedAddress}
+							<span class="truncate max-w-24 text-muted-foreground" title={connectedAddress}>
+								{connectedAddress.slice(0, 6)}…{connectedAddress.slice(-4)}
+							</span>
+						{/if}
+						{#if connectedAddress && balanceOg != null}
+							<span class="text-muted-foreground/70" aria-hidden="true">·</span>
+						{/if}
+						{#if balanceOg != null}
+							<span class="tabular-nums text-foreground/90">{balanceOg}</span>
+						{/if}
+					</div>
+				{/if}
 				<AccountSelect bind:provider />
 			</div>
 		</div>
 	</header>
 
 	<section class="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="Messages">
-		<ul class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-auto px-4 py-6">
+		<ul class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-4 py-6">
 			{#each $messages as message (message.id)}
 				<li
 					class={cn(
-						'max-w-[85%] rounded-2xl px-4 py-3',
+						'max-w-[85%] shrink-0 rounded-2xl px-4 py-3',
 						message.role === 'user'
 							? 'self-end bg-primary text-primary-foreground'
 							: 'self-start bg-muted/60',
@@ -118,16 +227,16 @@
 					<button
 						type="submit"
 						class="shrink-0 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
-						disabled={!provider}
+						disabled={sendBlocked}
 					>
-						Send
+						{submitting || waitingOnResponse ? '…' : 'Send'}
 					</button>
 				</div>
 			</form>
 			<div class="mx-auto mt-4 flex max-w-3xl flex-col gap-4">
 				<div class="flex flex-wrap items-end gap-4">
 					<div class="flex flex-col gap-1.5">
-						<label for="chat-model-select" class="text-xs font-medium text-muted-foreground">Model</label>
+						<label for="chat-model-select" class="text-xs font-medium text-muted-foreground">Model (hosted on 0G Compute)</label>
 						<select
 							id="chat-model-select"
 							class="min-w-[12rem] rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -135,9 +244,11 @@
 							onchange={(e) =>
 								setProviderAddress((e.target as HTMLSelectElement).value)}
 						>
-							{#each models as m}
-								<option value={m.contract.address}>{m.name}</option>
-							{/each}
+							<optgroup label="0G Compute">
+								{#each models as m}
+									<option value={m.contract.address}>{m.name}</option>
+								{/each}
+							</optgroup>
 						</select>
 					</div>
 					<div class="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -145,21 +256,18 @@
 						<Popover.Root bind:open={comboboxOpen}>
 							<Popover.Trigger>
 								{#snippet child({ props }: { props: Record<string, unknown> })}
-									<button
-										type="button"
+									<div
 										{...props}
 										class="flex min-h-10 min-w-36 flex-wrap items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-left text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_span.chip]:cursor-default"
 										role="combobox"
+										tabindex="0"
 										aria-expanded={comboboxOpen}
 										aria-labelledby="chat-context-agents-label"
 									>
 										{#each contextAgentIds as id}
 											{@const agent = agents.find((a) => a.id === id)}
 											{#if agent}
-												<span
-													class="chip inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"
-													onclick={(e) => e.stopPropagation()}
-												>
+												<span class="chip inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
 													{agent.name}
 													<button
 														type="button"
@@ -176,7 +284,7 @@
 											{contextAgentIds.length > 0 ? 'Add…' : 'Select agents…'}
 										</span>
 										<ChevronsUpDownIcon class="ms-auto size-4 shrink-0 opacity-50" />
-									</button>
+									</div>
 								{/snippet}
 							</Popover.Trigger>
 							<Popover.Content class="w-72 p-0" align="start">
