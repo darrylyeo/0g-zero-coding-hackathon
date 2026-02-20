@@ -1,6 +1,6 @@
 import { createPublicClient, defineChain, http } from 'viem'
-import type { Chain, PublicClient } from 'viem'
-import type { Transaction } from 'viem'
+import type { Chain, Hash, PublicClient } from 'viem'
+import type { Block, Transaction } from 'viem'
 import { rpcEndpointsByChainId } from '$/constants/rpc'
 import { networkByChainId } from '$/constants/networks'
 
@@ -54,4 +54,27 @@ export function createExplorerClient(chainId: number): PublicClient {
 		chain,
 		transport: http(url),
 	})
+}
+
+export async function getBlockWithTransactions(
+	client: PublicClient,
+	blockNumber: bigint,
+): Promise<Block<bigint, true, 'latest'>> {
+	const block = await client.getBlock({
+		blockNumber,
+		includeTransactions: true,
+	})
+	const txList = block.transactions as (Hash | Transaction<bigint, number, boolean>)[]
+	const first = txList[0]
+	if (txList.length === 0 || typeof first !== 'string')
+		return block as Block<bigint, true, 'latest'>
+	const txs = await Promise.all(
+		(txList as Hash[]).map((hash) =>
+			client.getTransaction({ hash }),
+		),
+	)
+	return {
+		...block,
+		transactions: txs.filter(Boolean) as Transaction<bigint, number, boolean>[],
+	} as Block<bigint, true, 'latest'>
 }

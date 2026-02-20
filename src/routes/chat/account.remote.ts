@@ -9,6 +9,15 @@ export const getAccountInfo = query(async () => {
 	return serializeBigInts(ledger)
 })
 
+export const getAccountDetail = query(async () => {
+	const broker = await getBroker()
+	const [ledger, detail] = await Promise.all([
+		broker.ledger.getLedger(),
+		broker.ledger.getLedgerWithDetail(),
+	])
+	return serializeBigInts({ ledger, detail })
+})
+
 export const addLedger = command(
 	'unchecked',
 	async (arg: { amount: number }) => {
@@ -50,5 +59,14 @@ export const transferToProvider = command(
 		const wei = ethers.parseEther(amount.toString())
 		await broker.ledger.transferFund(providerAddress, 'inference', wei)
 		return { success: true, message: `Transferred ${amount} OG to ${providerAddress}` }
+	},
+)
+
+export const withdrawFromInference = command(
+	'unchecked',
+	async () => {
+		const broker = await getBroker()
+		await broker.ledger.retrieveFund('inference')
+		return { success: true, message: 'Withdrew inference balances to ledger' }
 	},
 )

@@ -9,12 +9,14 @@ export const networks = [
 		chainId: 16602,
 		name: '0G Testnet',
 		nativeCurrency: { symbol: 'OG', name: 'OG', decimals: 18 },
+		explorerUrl: 'https://chainscan-galileo.0g.ai',
 	},
 	{
 		type: Network.OgMainnet,
 		chainId: 16661,
 		name: '0G Mainnet',
 		nativeCurrency: { symbol: 'OG', name: 'OG', decimals: 18 },
+		explorerUrl: 'https://chainscan.0g.ai',
 	},
 ] as const
 

@@ -32,7 +32,7 @@
 
 <main class="flex flex-col gap-16 px-6 py-12 sm:px-8 md:gap-24 md:px-12 md:py-20">
 	<header class="flex max-w-2xl flex-col gap-6">
-		<h1 class="flex items-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+		<h1 class="flex items-center gap-0 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
 			<LogoZero class="size-[1em] text-primary" /><span class="logo-outline text-foreground">GUI</span>
 		</h1>
 		<p class="text-lg text-muted-foreground sm:text-xl">

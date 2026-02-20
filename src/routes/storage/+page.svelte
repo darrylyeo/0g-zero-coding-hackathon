@@ -19,7 +19,7 @@
 	} from '$/lib/storage/fees'
 	import { uploadToStorage, type UploadResult } from '$/lib/storage/uploader'
 	import {
-		downloadByRootHash,
+		downloadByRootHashViaProxy,
 		downloadBlobAsFile,
 	} from '$/lib/storage/downloader'
 	import { Button } from '$/components/ui/button'
@@ -133,9 +133,13 @@
 				return
 			}
 			const blob = createBlob(selectedFile)
+			const indexerUrl =
+				typeof window !== 'undefined'
+					? `${window.location.origin}/storage/indexer?network=${network}`
+					: networkConfig.storageRpc
 			const [result, err] = await uploadToStorage(
 				blob,
-				networkConfig.storageRpc,
+				indexerUrl,
 				networkConfig.l1Rpc,
 				signer,
 			)
@@ -158,7 +162,7 @@
 		downloading = true
 		downloadError = null
 		try {
-			const [data, err] = await downloadByRootHash(root, networkConfig.storageRpc)
+			const [data, err] = await downloadByRootHashViaProxy(root, network)
 			if (err) {
 				downloadError = err.message
 				return

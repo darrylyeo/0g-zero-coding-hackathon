@@ -1,3 +1,31 @@
+/** Use same-origin proxy to avoid CORS when indexer does not allow browser origins. */
+export async function downloadByRootHashViaProxy(
+	rootHash: string,
+	network: string,
+): Promise<[ArrayBuffer | null, Error | null]> {
+	try {
+		if (!rootHash?.trim()) {
+			return [null, new Error('Root hash is required')]
+		}
+		const url = `/storage/download?root=${encodeURIComponent(rootHash.trim())}&network=${encodeURIComponent(network)}`
+		const response = await fetch(url)
+		if (!response.ok) {
+			const msg = await response.text()
+			return [
+				null,
+				new Error(msg || `Download failed (${response.status})`),
+			]
+		}
+		const fileData = await response.arrayBuffer()
+		if (!fileData || fileData.byteLength === 0) {
+			return [null, new Error('Downloaded file is empty')]
+		}
+		return [fileData, null]
+	} catch (error) {
+		return [null, error instanceof Error ? error : new Error(String(error))]
+	}
+}
+
 export async function downloadByRootHash(
 	rootHash: string,
 	storageRpc: string,

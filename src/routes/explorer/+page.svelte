@@ -15,6 +15,7 @@
 	} from '$/lib/db/tx-explanations'
 	import {
 		createExplorerClient,
+		getBlockWithTransactions,
 		serializeTxForExplain,
 	} from '$/lib/explorer-client'
 	import AccountSelect from '$/components/account-select.svelte'
@@ -62,11 +63,7 @@
 		client: ReturnType<typeof createExplorerClient>,
 		num: bigint,
 	) {
-		const block = await client.getBlock({
-			blockNumber: num,
-			includeTransactions: true,
-		})
-		return block as Block<bigint, true, 'latest'>
+		return getBlockWithTransactions(client, num)
 	}
 
 	function parseStreamLine(line: string): string | null {
@@ -140,6 +137,20 @@
 		return explanationByKey[key]
 	}
 
+	async function fetchLatestBlocks(
+		c: ReturnType<typeof createExplorerClient>,
+		num: bigint,
+	) {
+		const nums = Array.from(
+			{ length: BLOCK_COUNT },
+			(_, i) => num - BigInt(i),
+		).filter((n) => n >= 0n)
+		const fetched = await Promise.all(nums.map((n) => fetchBlock(c, n)))
+		blocks = fetched.sort((a, b) =>
+			Number((b.number ?? 0n) - (a.number ?? 0n)),
+		)
+	}
+
 	$effect(() => {
 		const cid = chainId
 		if (unwatch) {
@@ -147,6 +158,7 @@
 			unwatch = null
 		}
 		client = null
+		blocks = []
 		try {
 			client = createExplorerClient(cid)
 		} catch {
@@ -158,9 +170,7 @@
 			pollingInterval: 4_000,
 			onBlockNumber(num) {
 				latestBlockNumber = num
-				fetchBlock(c, num).then((block) => {
-					blocks = [block, ...blocks].slice(0, BLOCK_COUNT)
-				})
+				fetchLatestBlocks(c, num)
 			},
 		})
 		return () => {
@@ -201,9 +211,17 @@
 			<li>
 				<Collapsible.Root class="rounded-lg border border-border">
 					<Collapsible.Trigger class="w-full px-3 py-2 text-left">
-						<span class="font-medium">Block {block.number?.toString() ?? '—'}</span>
+						<a
+							href="/explorer/block/{block.number?.toString() ?? ''}?chainId={chainId}"
+							class="font-medium hover:underline"
+							onclick={(e) => e.stopPropagation()}
+						>
+							Block {block.number?.toString() ?? '—'}
+						</a>
 						<span class="ms-2 text-muted-foreground">
-							{block.hash ? `${block.hash.slice(0, 10)}…` : ''}
+							{block.hash ?
+								`${block.hash.slice(0, 10)}…`
+							: ''}
 							· {txList.length} txs
 						</span>
 						<ChevronDownIcon class="ms-2 inline-block size-4 transition-transform" />
@@ -211,7 +229,18 @@
 					<Collapsible.Content class="px-3 pb-3 pt-0">
 						<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
 							<dt class="text-muted-foreground">Hash</dt>
-							<dd class="font-mono text-xs">{block.hash ?? '—'}</dd>
+							<dd class="font-mono text-xs">
+								{#if block.hash}
+									<a
+										href="/explorer/block/{block.number?.toString() ?? ''}?chainId={chainId}"
+										class="text-primary hover:underline break-all"
+									>
+										{block.hash}
+									</a>
+								{:else}
+									—
+								{/if}
+							</dd>
 							<dt class="text-muted-foreground">Timestamp</dt>
 							<dd>{block.timestamp != null ? new Date(Number(block.timestamp) * 1000).toISOString() : '—'}</dd>
 							<dt class="text-muted-foreground">Gas used</dt>
@@ -224,17 +253,33 @@
 								<li>
 									<Collapsible.Root class="rounded-md border border-border bg-muted/30">
 										<Collapsible.Trigger class="w-full px-3 py-2 text-left text-sm">
-											<span class="font-mono">{tx.hash.slice(0, 18)}…</span>
+											<a
+												href="/explorer/tx/{tx.hash}?chainId={chainId}"
+												class="font-mono hover:underline"
+												onclick={(e) => e.stopPropagation()}
+											>
+												{tx.hash.slice(0, 18)}…
+											</a>
 											<ChevronDownIcon class="ms-2 inline-block size-4" />
 										</Collapsible.Trigger>
 										<Collapsible.Content class="px-3 pb-3 pt-0">
 											<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
 												<dt class="text-muted-foreground">Hash</dt>
-												<dd class="font-mono text-xs break-all">{tx.hash}</dd>
+												<dd class="font-mono text-xs break-all">
+													<a href="/explorer/tx/{tx.hash}?chainId={chainId}" class="text-primary hover:underline">{tx.hash}</a>
+												</dd>
 												<dt class="text-muted-foreground">From</dt>
-												<dd class="font-mono text-xs break-all">{tx.from}</dd>
+												<dd class="font-mono text-xs break-all">
+													<a href="/explorer/address/{tx.from}?chainId={chainId}" class="text-primary hover:underline">{tx.from}</a>
+												</dd>
 												<dt class="text-muted-foreground">To</dt>
-												<dd class="font-mono text-xs break-all">{tx.to ?? '—'}</dd>
+												<dd class="font-mono text-xs break-all">
+													{#if tx.to}
+														<a href="/explorer/address/{tx.to}?chainId={chainId}" class="text-primary hover:underline">{tx.to}</a>
+													{:else}
+														—
+													{/if}
+												</dd>
 												<dt class="text-muted-foreground">Value</dt>
 												<dd>{tx.value?.toString() ?? '0'}</dd>
 												<dt class="text-muted-foreground">Gas</dt>
