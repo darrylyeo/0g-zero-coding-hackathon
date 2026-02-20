@@ -42,7 +42,7 @@
 		try {
 			const broker = await createBrokerFromProvider(p)
 			if (!broker) {
-				error = 'Switch to 0G Testnet in your wallet'
+				error = 'Switch to 0G Galileo testnet in your wallet'
 				detail = null
 				return
 			}
@@ -83,7 +83,7 @@
 		error = null
 		try {
 			const broker = await createBrokerFromProvider(provider)
-			if (!broker) throw new Error('Switch to 0G Testnet')
+			if (!broker) throw new Error('Switch to 0G Galileo testnet')
 			await broker.ledger.addLedger(amount)
 			await load(provider)
 		} catch (e) {
@@ -100,7 +100,7 @@
 		error = null
 		try {
 			const broker = await createBrokerFromProvider(provider)
-			if (!broker) throw new Error('Switch to 0G Testnet')
+			if (!broker) throw new Error('Switch to 0G Galileo testnet')
 			await broker.ledger.transferFund(transferProvider, 'inference', ethers.parseEther(amount.toString()))
 			await load(provider)
 		} catch (e) {
@@ -116,7 +116,7 @@
 		error = null
 		try {
 			const broker = await createBrokerFromProvider(provider)
-			if (!broker) throw new Error('Switch to 0G Testnet')
+			if (!broker) throw new Error('Switch to 0G Galileo testnet')
 			await broker.inference.acknowledgeProviderSigner(providerAddress)
 			await load(provider)
 		} catch (e) {
@@ -132,7 +132,7 @@
 		error = null
 		try {
 			const broker = await createBrokerFromProvider(provider)
-			if (!broker) throw new Error('Switch to 0G Testnet')
+			if (!broker) throw new Error('Switch to 0G Galileo testnet')
 			await broker.ledger.retrieveFund('inference')
 			await load(provider)
 		} catch (e) {
@@ -191,24 +191,24 @@
 							</div>
 							<div class="flex justify-between gap-4">
 								<dt class="text-muted-foreground">Available</dt>
-								<dd class="tabular-nums font-medium">{weiToOg(ledger.availableBalance)} OG</dd>
+								<dd class="tabular-nums font-medium">{weiToOg(ledger.availableBalance)} 0G</dd>
 							</div>
 							<div class="flex justify-between gap-4">
 								<dt class="text-muted-foreground">Total</dt>
-								<dd class="tabular-nums">{weiToOg(ledger.totalBalance)} OG</dd>
+								<dd class="tabular-nums">{weiToOg(ledger.totalBalance)} 0G</dd>
 							</div>
 						</dl>
 					</section>
 
 					<section>
 						<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Funds per model</h2>
-						<p class="mb-2 text-xs text-muted-foreground">OG available for each model when you chat.</p>
+						<p class="mb-2 text-xs text-muted-foreground">0G available for each model when you chat.</p>
 						<div class="overflow-hidden rounded-xl border border-border shadow-sm">
 							<table class="w-full table-auto border-collapse text-sm">
 								<thead>
 									<tr class="border-b border-border bg-muted/40 text-left text-muted-foreground">
 										<th class="px-4 py-3 font-medium">Model</th>
-										<th class="px-4 py-3 text-right font-medium">Available (OG)</th>
+										<th class="px-4 py-3 text-right font-medium">Available (0G)</th>
 										<th class="w-24 px-4 py-3"></th>
 									</tr>
 								</thead>
@@ -243,7 +243,7 @@
 									{:else}
 										<tr>
 											<td colspan="3" class="px-4 py-8 text-center text-muted-foreground">
-												No funds for any model yet. Transfer OG below.
+												No funds for any model yet. Transfer 0G below.
 											</td>
 										</tr>
 									{/each}
@@ -257,7 +257,7 @@
 						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 							<div class="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
 								<label for="add-amount" class="text-sm font-medium">Add to ledger</label>
-								<p class="text-xs text-muted-foreground">Min 3 OG. Funds your ledger.</p>
+								<p class="text-xs text-muted-foreground">Min 3 0G. Funds your ledger.</p>
 								<div class="mt-auto flex flex-wrap items-center gap-2">
 									<input
 										id="add-amount"
@@ -279,7 +279,7 @@
 							</div>
 							<div class="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
 								<label for="transfer-provider" class="text-sm font-medium">Transfer to model</label>
-								<p class="text-xs text-muted-foreground">Send OG so this model has funds when you chat.</p>
+								<p class="text-xs text-muted-foreground">Send 0G so this model has funds when you chat.</p>
 								<div class="mt-auto flex flex-wrap items-center gap-2">
 									<select
 										id="transfer-provider"
@@ -297,7 +297,7 @@
 										class="w-20 rounded-lg border border-input bg-background px-3 py-2 text-sm"
 										bind:value={transferAmount}
 									/>
-									<span class="text-xs text-muted-foreground">OG</span>
+									<span class="text-xs text-muted-foreground">0G</span>
 									<button
 										type="button"
 										class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
@@ -326,7 +326,7 @@
 					</section>
 
 					<p class="text-xs leading-relaxed text-muted-foreground">
-						Ledger = your pool. Transfer OG to a model so that model has funds when you chat.
+						Ledger = your pool. Transfer 0G to a model so that model has funds when you chat.
 					</p>
 				</div>
 			{:else if !provider}
@@ -338,7 +338,7 @@
 			{#if error && (error.toLowerCase().includes('ledger') || error.toLowerCase().includes('not found'))}
 				<section class="rounded-xl border border-border bg-card p-6 shadow-sm">
 					<h2 class="mb-2 text-sm font-medium">Create ledger</h2>
-					<p class="mb-4 text-xs text-muted-foreground">Add at least 3 OG to create your ledger.</p>
+					<p class="mb-4 text-xs text-muted-foreground">Add at least 3 0G to create your ledger.</p>
 					<div class="flex flex-wrap items-center gap-3">
 						<input
 							id="add-amount-init"
@@ -348,7 +348,7 @@
 							class="w-28 rounded-lg border border-input bg-background px-3 py-2 text-sm"
 							bind:value={addAmount}
 						/>
-						<span class="text-xs text-muted-foreground">OG</span>
+						<span class="text-xs text-muted-foreground">0G</span>
 						<button
 							type="button"
 							class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
