@@ -123,9 +123,9 @@
     font-family: var(--font-sans);
     background:
       radial-gradient(
-        ellipse 100% 80% at 85% 10%,
-        rgba(146, 0, 225, 0.04) 0%,
-        transparent 50%
+        ellipse 120% 100% at 85% 0%,
+        rgba(146, 0, 225, 0.12) 0%,
+        transparent 55%
       ),
       var(--background);
   }
@@ -133,9 +133,9 @@
   .dark body {
     background:
       radial-gradient(
-        ellipse 100% 80% at 85% 10%,
-        rgba(183, 95, 255, 0.06) 0%,
-        transparent 50%
+        ellipse 120% 100% at 85% 0%,
+        rgba(183, 95, 255, 0.18) 0%,
+        transparent 55%
       ),
       var(--background);
   }

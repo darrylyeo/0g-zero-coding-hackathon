@@ -12,10 +12,17 @@
 		chatPreferencesCollection,
 		upsertChatPreferences,
 	} from '$/lib/db/chat-preferences'
+	import {
+		chatQueueCollection,
+		pushChatQueueItem,
+		shiftChatQueue,
+	} from '$/lib/db/chat-queue'
 	import { createBrokerFromProvider } from '$/lib/broker-client'
 	import AccountSelect from '$/components/account-select.svelte'
 	import * as Command from '$/components/ui/command'
 	import * as Popover from '$/components/ui/popover'
+	import { flip } from 'svelte/animate'
+	import { fade } from 'svelte/transition'
 	import { cn } from '$/lib/utils'
 
 	let provider = $state<import('$lib/eip6963').EIP1193Provider | null>(null)
@@ -23,7 +30,15 @@
 	let input = $state('')
 	let connectedAddress = $state<string | null>(null)
 	let balanceOg = $state<string | null>(null)
-	let submitting = $state(false)
+	let processingLock = $state(false)
+	let waitingOn = $state<'connecting wallet' | 'funds' | 'response' | null>(null)
+
+	const queueQuery = useLiveQuery((q) =>
+		q
+			.from({ q: chatQueueCollection })
+			.where(({ q }) => eq(q.id, 'default')),
+	)
+	const messageQueue = $derived(queueQuery.data[0]?.items ?? [])
 
 	$effect(() => {
 		const p = provider
@@ -95,12 +110,68 @@
 		})
 		return () => unsub()
 	})
-	const waitingOnResponse = $derived(
+	const isWaitingOnResponse = $derived(
 		chatStatus === 'submitted' || chatStatus === 'streaming',
 	)
-	const sendBlocked = $derived(
-		!provider || submitting || waitingOnResponse,
-	)
+
+	$effect(() => {
+		if (messageQueue.length === 0 && !isWaitingOnResponse) {
+			waitingOn = null
+			return
+		}
+		if (messageQueue.length === 0) return
+		if (isWaitingOnResponse) {
+			waitingOn = 'response'
+			return
+		}
+		if (waitingOn === 'funds') return
+		if (processingLock) return
+		if (!provider) {
+			waitingOn = 'connecting wallet'
+			return
+		}
+		processingLock = true
+		const message = messageQueue[0]
+		const providerAddress = selectedProviderAddress
+		const agentIds = [...contextAgentIds]
+		;(async () => {
+			try {
+				const broker = await createBrokerFromProvider(provider!)
+				if (!broker) {
+					waitingOn = 'connecting wallet'
+					processingLock = false
+					return
+				}
+				const { endpoint, model } =
+					await broker.inference.getServiceMetadata(providerAddress)
+				const rawHeaders = await broker.inference.getRequestHeaders(
+					providerAddress,
+					message,
+				)
+				const authHeaders: Record<string, string> = {}
+				for (const [k, v] of Object.entries(rawHeaders))
+					if (typeof v === 'string') authHeaders[k] = v
+				chat.append(
+					{ role: 'user', content: message },
+					{
+						body: {
+							providerAddress,
+							contextAgentIds: agentIds,
+							endpoint,
+							model,
+							authHeaders,
+						},
+					},
+				)
+				shiftChatQueue()
+				waitingOn = 'response'
+			} catch {
+				waitingOn = 'funds'
+			} finally {
+				processingLock = false
+			}
+		})()
+	})
 
 	function setProviderAddress(addr: string) {
 		upsertChatPreferences({ providerAddress: addr })
@@ -119,45 +190,12 @@
 		upsertChatPreferences({ contextAgentIds: current.filter((x) => x !== id) })
 	}
 
-	async function handleSubmit(e: SubmitEvent) {
+	function handleSubmit(e: SubmitEvent) {
 		e.preventDefault()
 		const text = input.trim()
-		if (!text || sendBlocked) return
-		submitting = true
-		try {
-			const broker = await createBrokerFromProvider(provider!)
-			if (!broker) {
-				submitting = false
-				return
-			}
-			const { endpoint, model } = await broker.inference.getServiceMetadata(
-				selectedProviderAddress,
-			)
-			const rawHeaders = await broker.inference.getRequestHeaders(
-				selectedProviderAddress,
-				text,
-			)
-			const authHeaders: Record<string, string> = {}
-			for (const [k, v] of Object.entries(rawHeaders))
-				if (typeof v === 'string') authHeaders[k] = v
-			chat.append(
-				{ role: 'user', content: text },
-				{
-					body: {
-						providerAddress: selectedProviderAddress,
-						contextAgentIds,
-						endpoint,
-						model,
-						authHeaders,
-					},
-				},
-			)
-			input = ''
-		} catch (_) {
-			// TODO: surface error (e.g. insufficient balance, network)
-		} finally {
-			submitting = false
-		}
+		if (!text) return
+		pushChatQueueItem(text)
+		input = ''
 	}
 </script>
 
@@ -201,6 +239,7 @@
 							: 'self-start bg-muted/60',
 					)}
 					data-role={message.role}
+					animate:flip={{ duration: 200 }}
 				>
 					<div class="text-xs font-medium opacity-80">{message.role}</div>
 					<div class="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">
@@ -212,28 +251,35 @@
 					</div>
 				</li>
 			{/each}
+			{#if messageQueue.length > 0}
+				<li
+					class="flex w-full shrink-0 items-center gap-3 py-2"
+					aria-hidden="true"
+					in:fade={{ duration: 150 }}
+					out:fade={{ duration: 100 }}
+				>
+					<span class="flex-1 border-t border-border"></span>
+					<span class="text-xs font-medium text-muted-foreground">Queued</span>
+					<span class="flex-1 border-t border-border"></span>
+				</li>
+				{#each messageQueue as text, i (i)}
+					<li
+						class="max-w-[85%] shrink-0 self-end rounded-2xl border border-dashed border-primary/50 bg-primary/10 px-4 py-3"
+						data-role="user"
+						data-queued
+						animate:flip={{ duration: 200 }}
+					>
+						<div class="text-xs font-medium opacity-80">queued</div>
+						<div class="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">
+							{text}
+						</div>
+					</li>
+				{/each}
+			{/if}
 		</ul>
 
 		<div class="shrink-0 border-t border-border bg-background px-4 py-4">
-			<form class="mx-auto max-w-3xl" onsubmit={handleSubmit}>
-				<div class="flex gap-3">
-					<input
-						type="text"
-						class="min-w-0 flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-						bind:value={input}
-						placeholder="Message..."
-						aria-label="Message"
-					/>
-					<button
-						type="submit"
-						class="shrink-0 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
-						disabled={sendBlocked}
-					>
-						{submitting || waitingOnResponse ? '…' : 'Send'}
-					</button>
-				</div>
-			</form>
-			<div class="mx-auto mt-4 flex max-w-3xl flex-col gap-4">
+			<div class="mx-auto flex max-w-3xl flex-col gap-4">
 				<div class="flex flex-wrap items-end gap-4">
 					<div class="flex flex-col gap-1.5">
 						<label for="chat-model-select" class="text-xs font-medium text-muted-foreground">Model (hosted on 0G Compute)</label>
@@ -315,6 +361,43 @@
 					</div>
 				</div>
 			</div>
+			<form class="mx-auto mt-4 max-w-3xl" onsubmit={handleSubmit}>
+				<div class="flex gap-3">
+					<input
+						type="text"
+						class="min-w-0 flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						bind:value={input}
+						placeholder="Message..."
+						aria-label="Message"
+					/>
+					<button
+						type="submit"
+						class="shrink-0 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
+						disabled={!input.trim()}
+					>
+						Send
+					</button>
+				</div>
+			</form>
+			{#if messageQueue.length > 0 || waitingOn}
+				<p class="mx-auto mt-2 max-w-3xl text-xs text-muted-foreground">
+					{#if messageQueue.length > 0}
+						Queued: {messageQueue.length} {messageQueue.length === 1 ? 'message' : 'messages'}.
+					{/if}
+					{#if waitingOn}
+						Waiting on: {waitingOn}.
+						{#if waitingOn === 'funds'}
+							<button
+								type="button"
+								class="underline underline-offset-2 hover:text-foreground"
+								onclick={() => (waitingOn = null)}
+							>
+								Retry
+							</button>
+						{/if}
+					{/if}
+				</p>
+			{/if}
 		</div>
 	</section>
 </main>

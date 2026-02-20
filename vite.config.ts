@@ -11,9 +11,10 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
 	define: {
 		global: 'globalThis',
+		'process.browser': true,
 	},
 	optimizeDeps: {
-		include: ['crypto-browserify', 'readable-stream'],
+		include: ['crypto-browserify', 'readable-stream', 'stream-browserify'],
 	},
 	build: {
 		commonjsOptions: {
@@ -27,6 +28,7 @@ export default defineConfig({
 			'fs/promises': path.resolve(__dirname, 'src/lib/stubs/empty-node.ts'),
 			'fs': path.resolve(__dirname, 'src/lib/stubs/empty-fs.ts'),
 			'path': 'path-browserify',
+			stream: 'stream-browserify',
 		},
 	},
 	test: {

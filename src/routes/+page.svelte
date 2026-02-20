@@ -42,9 +42,12 @@
 			<Button href="/chat" size="lg">
 				Try Chat
 			</Button>
-			<Button href="https://build.0g.ai/" variant="outline" size="lg" target="_blank" rel="noopener noreferrer">
-				Builder Hub
+			<Button href="/agents" variant="outline" size="lg">
+				Discover Agents
 			</Button>
+			<!-- <Button href="https://build.0g.ai/" variant="outline" size="lg" target="_blank" rel="noopener noreferrer">
+				Builder Hub
+			</Button> -->
 		</div>
 	</header>
 

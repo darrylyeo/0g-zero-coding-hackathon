@@ -48,6 +48,12 @@
 			>
 				Storage
 			</a>
+			<a
+				href="/explorer"
+				class="rounded-md px-3 py-2 text-sm font-medium transition-colors {page.url.pathname === '/explorer' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/50'}"
+			>
+				Explorer
+			</a>
 		</div>
 		<footer class="shrink-0 border-t border-sidebar-border px-4 py-3 text-center text-sm text-sidebar-foreground/70">
 			Powered by
@@ -62,7 +68,7 @@
 		</footer>
 	</nav>
 	<main
-		class="min-w-0 flex-1 bg-gradient-to-b from-background via-background to-primary/[0.03] dark:to-primary/[0.06]"
+		class="min-w-0 flex-1 bg-gradient-to-b from-background via-background to-primary/[0.08] dark:to-primary/[0.12]"
 	>
 		{@render children()}
 	</main>
