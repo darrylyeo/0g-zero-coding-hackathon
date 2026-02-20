@@ -17,8 +17,8 @@ description: Guides development on 0G Network (fastest AI L1). Use when building
 
 | Use case | Package | Install |
 |----------|---------|--------|
-| General 0G (TS) | `@0glabs/0g-ts-sdk` | `npm install @0glabs/0g-ts-sdk` |
-| Serving / inference (TS) | `@0glabs/0g-serving-user-broker` | `npm install @0glabs/0g-serving-user-broker` |
+| General 0G (TS) | `@0glabs/0g-ts-sdk` | `pnpm add @0glabs/0g-ts-sdk` |
+| Serving / inference (TS) | `@0glabs/0g-serving-user-broker` | `pnpm add @0glabs/0g-serving-user-broker` |
 | Python inference + storage | `python-0g` | `pip install python-0g` |
 | Data availability (Rust) | `0g-da-rust-sdk` | `cargo add 0g-da-rust-sdk` |
 | Chain framework (Go) | Cosmos SDK fork | `go get github.com/0gfoundation/cosmos-sdk` |

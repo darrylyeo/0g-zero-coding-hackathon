@@ -6,6 +6,7 @@
 
 :root {
   /* 0G brand: 0g.ai/brandkit — base White #FEFEFE, Black #000000, Gray #E5E5E5; primary #9200E1 + purples */
+  --font-sans: 'Outfit', system-ui, sans-serif;
   --radius: 0.625rem;
   --background: #FEFEFE;
   --foreground: #000000;
@@ -75,6 +76,7 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-sans);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -117,6 +119,33 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    font-family: var(--font-sans);
+    background:
+      radial-gradient(
+        ellipse 100% 80% at 85% 10%,
+        rgba(146, 0, 225, 0.04) 0%,
+        transparent 50%
+      ),
+      var(--background);
+  }
+
+  .dark body {
+    background:
+      radial-gradient(
+        ellipse 100% 80% at 85% 10%,
+        rgba(183, 95, 255, 0.06) 0%,
+        transparent 50%
+      ),
+      var(--background);
+  }
+
+  .logo-outline {
+    -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.12);
+    paint-order: stroke fill;
+  }
+
+  .dark .logo-outline {
+    -webkit-text-stroke: 0.5px rgba(254, 254, 254, 0.15);
   }
 }
