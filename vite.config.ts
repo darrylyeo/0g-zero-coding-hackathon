@@ -7,14 +7,16 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-export default defineConfig({
+const stubDir = path.resolve(__dirname, 'src/lib/stubs')
+
+export default defineConfig(({ isSsrBuild }) => ({
 	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
 	define: {
 		global: 'globalThis',
 		'process.browser': true,
 	},
 	optimizeDeps: {
-		include: ['crypto-browserify', 'readable-stream', 'stream-browserify'],
+		include: ['crypto-browserify', 'path-browserify', 'readable-stream', 'stream-browserify'],
 	},
 	build: {
 		commonjsOptions: {
@@ -24,11 +26,14 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'node:crypto': 'crypto-browserify',
-			'node:fs/promises': path.resolve(__dirname, 'src/lib/stubs/empty-node.ts'),
-			'fs/promises': path.resolve(__dirname, 'src/lib/stubs/empty-node.ts'),
-			'fs': path.resolve(__dirname, 'src/lib/stubs/empty-fs.ts'),
+			'node:fs/promises': path.resolve(stubDir, 'empty-node.ts'),
+			'fs/promises': path.resolve(stubDir, 'empty-node.ts'),
+			'fs': path.resolve(stubDir, 'empty-fs.ts'),
 			'path': 'path-browserify',
 			stream: 'stream-browserify',
+			...(isSsrBuild === false
+				? { child_process: path.resolve(stubDir, 'empty-child-process.ts') }
+				: {}),
 		},
 	},
 	test: {
@@ -59,4 +64,4 @@ export default defineConfig({
 			}
 		]
 	}
-});
+}))
