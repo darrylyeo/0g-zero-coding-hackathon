@@ -100,7 +100,7 @@
 	<main
 		class="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-background via-background to-primary/[0.06] dark:to-primary/[0.1]"
 	>
-		<div class="min-h-0 flex-1 overflow-auto">
+		<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 			{@render children()}
 		</div>
 	</main>
