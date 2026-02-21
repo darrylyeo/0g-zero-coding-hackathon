@@ -145,7 +145,10 @@
 			{ length: BLOCK_COUNT },
 			(_, i) => num - BigInt(i),
 		).filter((n) => n >= 0n)
-		const fetched = await Promise.all(nums.map((n) => fetchBlock(c, n)))
+		const results = await Promise.allSettled(nums.map((n) => fetchBlock(c, n)))
+		const fetched = results
+			.filter((r): r is PromiseFulfilledResult<Block<bigint, true, 'latest'>> => r.status === 'fulfilled')
+			.map((r) => r.value)
 		blocks = fetched.sort((a, b) =>
 			Number((b.number ?? 0n) - (a.number ?? 0n)),
 		)

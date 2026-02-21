@@ -3,7 +3,7 @@
 	import { createBrokerFromProvider } from '$/lib/broker-client'
 	import AccountSelect from '$/components/account-select.svelte'
 	import { models, modelByAddress } from '$/constants/models'
-	import { ogTestnet } from '$/constants/networks'
+	import { ogMinGasPrice, ogTestnet } from '$/constants/networks'
 
 	// Types/constants
 	type LedgerRow = { user: string; availableBalance: string; totalBalance: string; additionalInfo: string }
@@ -84,7 +84,7 @@
 		try {
 			const broker = await createBrokerFromProvider(provider)
 			if (!broker) throw new Error('Switch to 0G Galileo testnet')
-			await broker.ledger.addLedger(amount)
+			await broker.ledger.addLedger(amount, ogMinGasPrice)
 			await load(provider)
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e)
@@ -101,7 +101,12 @@
 		try {
 			const broker = await createBrokerFromProvider(provider)
 			if (!broker) throw new Error('Switch to 0G Galileo testnet')
-			await broker.ledger.transferFund(transferProvider, 'inference', ethers.parseEther(amount.toString()))
+			await broker.ledger.transferFund(
+				transferProvider,
+				'inference',
+				ethers.parseEther(amount.toString()),
+				ogMinGasPrice,
+			)
 			await load(provider)
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e)
@@ -133,7 +138,7 @@
 		try {
 			const broker = await createBrokerFromProvider(provider)
 			if (!broker) throw new Error('Switch to 0G Galileo testnet')
-			await broker.ledger.retrieveFund('inference')
+			await broker.ledger.retrieveFund('inference', ogMinGasPrice)
 			await load(provider)
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e)
@@ -335,7 +340,7 @@
 				<p class="text-muted-foreground">Loading account…</p>
 			{/if}
 
-			{#if error && (error.toLowerCase().includes('ledger') || error.toLowerCase().includes('not found'))}
+			{#if error && !detail}
 				<section class="rounded-xl border border-border bg-card p-6 shadow-sm">
 					<h2 class="mb-2 text-sm font-medium">Create ledger</h2>
 					<p class="mb-4 text-xs text-muted-foreground">Add at least 3 0G to create your ledger.</p>

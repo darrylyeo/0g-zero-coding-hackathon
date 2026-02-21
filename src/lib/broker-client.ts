@@ -43,6 +43,29 @@ async function ensureTestnetChain(provider: EIP1193Provider): Promise<boolean> {
 	}
 }
 
+const minGasBigInt = BigInt(ogMinGasPrice)
+
+function wrapProviderWithMinGas(ethersProvider: BrowserProvider): BrowserProvider {
+	return new Proxy(ethersProvider, {
+		get(target, p, receiver) {
+			if (p === 'getFeeData') {
+				return async () => {
+					const fd = await target.getFeeData()
+					const atLeast = (v: bigint | null | undefined) =>
+						(v != null && v >= minGasBigInt ? v : minGasBigInt) as bigint
+					return {
+						gasPrice: atLeast(fd?.gasPrice ?? null),
+						maxFeePerGas: fd?.maxFeePerGas != null ? atLeast(fd.maxFeePerGas) : minGasBigInt,
+						maxPriorityFeePerGas:
+							fd?.maxPriorityFeePerGas != null ? atLeast(fd.maxPriorityFeePerGas) : minGasBigInt,
+					}
+				}
+			}
+			return Reflect.get(target, p, receiver)
+		},
+	}) as BrowserProvider
+}
+
 export async function createBrokerFromProvider(
 	provider: EIP1193Provider,
 ): Promise<ZGComputeNetworkBroker | null> {
@@ -52,7 +75,8 @@ export async function createBrokerFromProvider(
 		const ok = await ensureTestnetChain(provider)
 		if (!ok) return null
 	}
-	const signer = await ethersProvider.getSigner()
+	const providerWithMinGas = wrapProviderWithMinGas(ethersProvider)
+	const signer = await providerWithMinGas.getSigner()
 	return createZGComputeNetworkBroker(
 		signer,
 		undefined,

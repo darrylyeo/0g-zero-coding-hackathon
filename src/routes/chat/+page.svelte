@@ -49,10 +49,7 @@
 <main class="flex h-full min-h-0 flex-col overflow-hidden">
 	<header class="shrink-0 border-b border-border bg-background px-4 py-4">
 		<div class="mx-auto flex max-w-3xl items-center justify-between">
-			<div class="flex items-center gap-3">
-				<h1 class="text-lg font-semibold tracking-tight">Chat</h1>
-				<a href="/account" class="text-sm text-muted-foreground hover:text-foreground">Account</a>
-			</div>
+			<h1 class="text-lg font-semibold tracking-tight">Chat</h1>
 			<button
 				type="button"
 				class="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"

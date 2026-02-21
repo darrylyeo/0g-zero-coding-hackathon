@@ -6,8 +6,8 @@
 	let { children } = $props()
 
 	const navLinks = [
-		{ href: '/chat', label: 'Chat' },
 		{ href: '/account', label: 'Account' },
+		{ href: '/chat', label: 'Chat' },
 		{ href: '/agents', label: 'Agents' },
 		{ href: '/storage', label: 'Storage' },
 		{ href: '/explorer', label: 'Explorer' },
@@ -32,7 +32,7 @@
 	}
 </script>
 
-<div class="flex min-h-screen bg-background">
+<div class="flex h-screen min-h-0 overflow-hidden bg-background">
 	<nav
 		class="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar shadow-[2px_0_16px_-4px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_20px_-4px_rgba(0,0,0,0.25)]"
 	>
@@ -55,20 +55,53 @@
 			{/each}
 		</div>
 		<footer class="shrink-0 border-t border-sidebar-border px-4 py-3 text-center text-xs text-sidebar-foreground/70">
-			Powered by
-			<a
-				href={footerLink.href}
-				target="_blank"
-				rel="noopener noreferrer"
-				class="underline underline-offset-2 hover:text-sidebar-foreground"
-			>
-				{footerLink.label}
-			</a>
+			<span class="block">
+				A
+				<a
+					href="https://github.com/darrylyeo/0g-zero-coding-hackathon"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="underline underline-offset-2 hover:text-sidebar-foreground"
+				>
+					hack
+				</a>
+				by
+				<a
+					href="https://farcaster.xyz/darrylyeo"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="underline underline-offset-2 hover:text-sidebar-foreground"
+				>
+					Darryl Yeo
+				</a>
+				for
+				<a
+					href="https://luma.com/zerocoding_ethdenver2026"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="underline underline-offset-2 hover:text-sidebar-foreground"
+				>
+					0G
+				</a>
+			</span>
+			<span class="mt-2 block">
+				Powered by
+				<a
+					href={footerLink.href}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="underline underline-offset-2 hover:text-sidebar-foreground"
+				>
+					{footerLink.label}
+				</a>
+			</span>
 		</footer>
 	</nav>
 	<main
-		class="min-w-0 flex-1 overflow-auto bg-gradient-to-b from-background via-background to-primary/[0.06] dark:to-primary/[0.1]"
+		class="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-background via-background to-primary/[0.06] dark:to-primary/[0.1]"
 	>
-		{@render children()}
+		<div class="min-h-0 flex-1 overflow-auto">
+			{@render children()}
+		</div>
 	</main>
 </div>
