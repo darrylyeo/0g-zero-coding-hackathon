@@ -21,6 +21,7 @@ export default defineConfig(({ isSsrBuild }) => ({
 	build: {
 		commonjsOptions: {
 			transformMixedEsModules: true,
+			include: [/node_modules/],
 		},
 	},
 	resolve: {
